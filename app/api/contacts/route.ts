@@ -1,37 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
-import { seedContacts } from "@/lib/seed";
+import { supabase } from "@/lib/supabase";
 
-// Seed faqat bir marta
-seedContacts();
-
-// GET /api/contacts — barcha kontaktlarni qaytarish
+// GET /api/contacts
 export async function GET() {
-  const contacts = db.prepare("SELECT * FROM contacts ORDER BY name").all();
-  return NextResponse.json(contacts);
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("*")
+    .order("name");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }
 
-// POST /api/contacts — yangi kontakt qo'shish
+// POST /api/contacts
 export async function POST(req: NextRequest) {
   const { name, phone, role = "", color = "#6c63ff" } = await req.json();
-  if (!name || !phone) {
+  if (!name || !phone)
     return NextResponse.json({ error: "name va phone majburiy" }, { status: 400 });
-  }
-  try {
-    const result = db
-      .prepare("INSERT INTO contacts (name, phone, role, color) VALUES (?, ?, ?, ?)")
-      .run(name, phone, role, color);
-    const contact = db.prepare("SELECT * FROM contacts WHERE id = ?").get(result.lastInsertRowid);
-    return NextResponse.json(contact, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Telefon raqam allaqachon mavjud" }, { status: 409 });
-  }
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .insert({ name, phone, role, color })
+    .select()
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 409 });
+  return NextResponse.json(data, { status: 201 });
 }
 
-// DELETE /api/contacts?id=1 — kontaktni o'chirish
+// DELETE /api/contacts?id=1
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id kerak" }, { status: 400 });
-  db.prepare("DELETE FROM contacts WHERE id = ?").run(id);
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

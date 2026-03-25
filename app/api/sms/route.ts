@@ -1,59 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
-// POST /api/sms — SMS yuborish va logga yozish
+// POST /api/sms
 export async function POST(req: NextRequest) {
   const { contactIds, message } = await req.json() as {
     contactIds: number[];
     message: string;
   };
 
-  if (!contactIds?.length || !message?.trim()) {
+  if (!contactIds?.length || !message?.trim())
     return NextResponse.json({ error: "contactIds va message kerak" }, { status: 400 });
-  }
 
-  // Tanlangan kontaktlarni olish
-  const placeholders = contactIds.map(() => "?").join(",");
-  const contacts = db
-    .prepare(`SELECT * FROM contacts WHERE id IN (${placeholders})`)
-    .all(...contactIds) as { id: number; phone: string; name: string }[];
+  const { data: contacts, error } = await supabase
+    .from("contacts")
+    .select("id, name, phone")
+    .in("id", contactIds);
 
-  if (!contacts.length) {
+  if (error || !contacts?.length)
     return NextResponse.json({ error: "Kontaktlar topilmadi" }, { status: 404 });
-  }
 
   // SMS logini saqlash
-  const insertLog = db.prepare(
-    "INSERT INTO sms_logs (contact_id, phone, message) VALUES (?, ?, ?)"
-  );
-  const logAll = db.transaction(() => {
-    for (const c of contacts) insertLog.run(c.id, c.phone, message);
-  });
-  logAll();
+  const logs = contacts.map((c) => ({
+    contact_id: c.id,
+    phone: c.phone,
+    message,
+  }));
+  await supabase.from("sms_logs").insert(logs);
 
-  // SMS URI qaytarish (mobil qurilmada ochiladi)
   const phones = contacts.map((c) => c.phone).join(";");
   const smsUri = `sms:${phones}?body=${encodeURIComponent(message)}`;
 
-  return NextResponse.json({
-    success: true,
-    count: contacts.length,
-    smsUri,
-    contacts: contacts.map((c) => ({ id: c.id, phone: c.phone, name: c.name })),
-  });
+  return NextResponse.json({ success: true, count: contacts.length, smsUri, contacts });
 }
 
-// GET /api/sms — SMS loglarini ko'rish
+// GET /api/sms
 export async function GET() {
-  const logs = db
-    .prepare(`
-      SELECT l.id, l.message, l.sent_at, l.phone,
-             c.name, c.role
-      FROM sms_logs l
-      LEFT JOIN contacts c ON c.id = l.contact_id
-      ORDER BY l.sent_at DESC
-      LIMIT 100
-    `)
-    .all();
-  return NextResponse.json(logs);
+  const { data, error } = await supabase
+    .from("sms_logs")
+    .select("*, contacts(name, role)")
+    .order("sent_at", { ascending: false })
+    .limit(100);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }

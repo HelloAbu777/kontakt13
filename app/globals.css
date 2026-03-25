@@ -1,23 +1,86 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
 
 :root {
-  --bg: #0a0a0f;
-  --surface: #13131a;
-  --surface2: #1c1c27;
-  --border: #2a2a3d;
+  --bg: #08080f;
+  --surface: #111118;
+  --surface2: #18181f;
+  --border: #252535;
   --accent: #6c63ff;
   --accent2: #ff6b6b;
   --accent3: #43e97b;
-  --text: #f0f0f8;
-  --muted: #7070a0;
-  --selected-bg: rgba(108,99,255,0.15);
+  --text: #eeeef8;
+  --muted: #6060a0;
+  --sel: rgba(108,99,255,0.13);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
 }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(108,99,255,0); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.fade-up  { animation: fadeUp 0.35s ease both; }
+.scale-in { animation: scaleIn 0.25s ease both; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Contact item tap feedback */
+.contact-row {
+  transition: background 0.15s, transform 0.1s;
+}
+.contact-row:active { transform: scale(0.98); background: var(--sel) !important; }
+
+/* Send button */
+.send-btn {
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.send-btn:not(:disabled):active { transform: scale(0.97); }
+.send-btn:not(:disabled) { animation: pulse 2.5s infinite; }
+
+/* Quick btn */
+.quick-btn { transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.quick-btn:active { transform: scale(0.96); }
+
+/* Modal overlay */
+.modal-overlay {
+  animation: scaleIn 0.2s ease both;
+}
+
+/* Stagger children */
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger > *:nth-child(6) { animation-delay: 0.24s; }
+.stagger > *:nth-child(7) { animation-delay: 0.28s; }
+.stagger > *:nth-child(8) { animation-delay: 0.32s; }
