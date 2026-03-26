@@ -77,6 +77,15 @@ export default function Home() {
     setAdding(false);
   }
 
+  async function deleteContact(id: number, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    await supabase.from("contacts").delete().eq("id", id);
+    setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
+    await fetchContacts();
+    showToastMsg("Kontakt o'chirildi");
+  }
+
   async function sendSMS() {
     if (!message.trim() || selected.size === 0 || sending) return;
     setSending(true);
@@ -208,6 +217,12 @@ export default function Home() {
                       </div>
                     </div>
                     <Checkbox checked={sel} />
+                    <button onClick={(e) => deleteContact(c.id, e)} style={{
+                      background: "rgba(255,107,107,0.1)", border: "1px solid rgba(255,107,107,0.25)",
+                      color: "#ff6b6b", borderRadius: 8, width: 30, height: 30,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", flexShrink: 0, fontSize: 14,
+                    }}>✕</button>
                   </div>
                 );
               })}
