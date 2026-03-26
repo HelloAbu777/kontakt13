@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -107,7 +107,7 @@ export default function Home() {
         background: "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(108,99,255,0.09) 0%, transparent 70%)",
       }} />
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px 90px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 100px", position: "relative", zIndex: 1 }}>
 
         {/* Header */}
         <header style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
