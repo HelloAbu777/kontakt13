@@ -1,11 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  "https://ovpekmsswwduwmonvjse.supabase.co",
-  "sb_publishable_4C42PMnRxHPIKs3Ir-c5Gw_a0CnkMub"
-);
+import { supabase } from "@/lib/supabase";
 
 type Contact = { id: number; name: string; phone: string; role?: string; color?: string };
 
@@ -24,7 +19,7 @@ export default function Home() {
   const [toast, setToast]       = useState("");
   const [loading, setLoading]   = useState(true);
   const [sending, setSending]   = useState(false);
-  const [activeTab, setActiveTab] = useState<"contacts"|"message"|"add">("contacts");
+  const [activeTab, setActiveTab] = useState<"contacts"|"message"|"add"|"webhook">("contacts");
   const [newName, setNewName]   = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newRole, setNewRole]   = useState("");
@@ -90,14 +85,22 @@ export default function Home() {
     if (!message.trim() || selected.size === 0 || sending) return;
     setSending(true);
     const selContacts = contacts.filter(c => selected.has(c.id));
-    const phones = selContacts.map(c => c.phone).join(";");
-    // Log saqlash
-    await supabase.from("sms_logs").insert(
-      selContacts.map(c => ({ contact_id: c.id, phone: c.phone, message }))
-    );
+    const res = await fetch("/api/sms-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phones: selContacts.map(c => c.phone),
+        names: selContacts.map(c => c.name),
+        message,
+      }),
+    });
+    const data = await res.json();
     setSending(false);
-    window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
-    showToastMsg(`${selContacts.length} ta kontaktga SMS yuborildi`);
+    if (data.success) {
+      showToastMsg(`📲 Telegramga so'rov yuborildi!`);
+    } else {
+      showToastMsg("❌ Xato: " + (data.error || "Noma'lum"));
+    }
   }
 
   const selContacts = contacts.filter(c => selected.has(c.id));
@@ -141,10 +144,10 @@ export default function Home() {
 
         {/* Tabs */}
         <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5,
+          display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 5,
           background: "var(--surface2)", borderRadius: 14, padding: 4, marginBottom: 14,
         }}>
-          {(["contacts","message","add"] as const).map(tab => (
+          {(["contacts","message","add","webhook"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: "10px", borderRadius: 11, border: "none", cursor: "pointer",
               fontFamily: "Syne,sans-serif", fontSize: 12, fontWeight: 700,
@@ -152,7 +155,7 @@ export default function Home() {
               color: activeTab === tab ? "white" : "var(--muted)",
               transition: "all 0.2s",
             }}>
-              {tab === "contacts" ? `Kontaktlar${selected.size > 0 ? ` (${selected.size})` : ""}` : tab === "message" ? "Xabar" : "+ Qo'shish"}
+              {tab === "contacts" ? `Kontaktlar${selected.size > 0 ? ` (${selected.size})` : ""}` : tab === "message" ? "Xabar" : tab === "add" ? "+ Qo'shish" : "🔗 Webhook"}
             </button>
           ))}
         </div>
@@ -274,6 +277,11 @@ export default function Home() {
           </div>
         )}
 
+        {/* WEBHOOK TAB */}
+        {activeTab === "webhook" && (
+          <WebhookTab onContactsAdded={fetchContacts} showToast={showToastMsg} />
+        )}
+
         {/* ADD TAB */}
         {activeTab === "add" && (
           <div style={card}>
@@ -313,8 +321,61 @@ export default function Home() {
   );
 }
 
-function Checkbox({ checked }: { checked: boolean }) {
+function WebhookTab({ onContactsAdded, showToast }: { onContactsAdded: () => void; showToast: (m: string) => void }) {
+  const [url, setUrl]         = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function fetchFromUrl() {
+    if (!url.trim()) return;
+    setLoading(true);
+    try {
+      const res  = await fetch("/api/webhook-fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Xato");
+      showToast(`✅ ${data.count} ta kontakt qo'shildi`);
+      onContactsAdded();
+    } catch (e: unknown) {
+      showToast("❌ " + (e instanceof Error ? e.message : "Xato"));
+    }
+    setLoading(false);
+  }
+
+  const inp: React.CSSProperties = {
+    width: "100%", background: "var(--surface2)", border: "1px solid var(--border)",
+    borderRadius: 12, padding: "12px 14px", color: "var(--text)",
+    fontFamily: "DM Sans,sans-serif", fontSize: 14, outline: "none",
+  };
+
   return (
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 20, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+        <span style={{ fontFamily: "Syne,sans-serif", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--muted)" }}>🔗 Webhook</span>
+      </div>
+      <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+        <input
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          placeholder="https://example.com/api/users"
+          style={inp}
+        />
+        <button onClick={fetchFromUrl} disabled={!url.trim() || loading} style={{
+          width: "100%", padding: "13px", border: "none", borderRadius: 12,
+          background: url.trim() ? "var(--accent)" : "var(--surface2)",
+          color: url.trim() ? "white" : "var(--muted)",
+          fontFamily: "Syne,sans-serif", fontSize: 14, fontWeight: 700,
+          cursor: url.trim() ? "pointer" : "not-allowed",
+        }}>{loading ? "Yuklanmoqda..." : "Kontaktlarni olish"}</button>
+      </div>
+    </div>
+  );
+}
+
+
+function Checkbox({ checked }: { checked: boolean }) {  return (
     <div style={{
       width: 22, height: 22, borderRadius: 7, flexShrink: 0,
       border: `2px solid ${checked ? "var(--accent)" : "var(--border)"}`,
