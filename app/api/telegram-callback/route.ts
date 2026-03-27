@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     if (smsData) {
       const phones = smsData.phones.split(",");
       const message = smsData.message;
-      const smsUrl = `sms:${phones.join(",")}?body=${encodeURIComponent(message)}`;
+      const cleanPhones = phones.map((p: string) => p.trim().replace(/\D/g, ""));
+      const smsUrl = `sms:${cleanPhones.join(";")}?body=${encodeURIComponent(message)}`;
 
       // Telegram xabarni tahrirlash - SMS link bilan
       await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {

@@ -7,12 +7,13 @@ function SmsConfirmInner() {
   const params  = useSearchParams();
   const phones  = params.get("phones") || "";
   const message = params.get("message") || "";
+  const cleanPhones = phones.split(",").map(p => p.trim().replace(/\D/g, "")).join(";");
 
   useEffect(() => {
     if (phones && message) {
-      window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
+      window.location.href = `sms:${cleanPhones}?body=${encodeURIComponent(message)}`;
     }
-  }, [phones, message]);
+  }, [phones, message, cleanPhones]);
 
   return (
     <div style={{
@@ -23,7 +24,7 @@ function SmsConfirmInner() {
       <div style={{ fontSize: 48, marginBottom: 16 }}>📱</div>
       <h2 style={{ marginBottom: 8 }}>SMS ilovasi ochilmoqda...</h2>
       <p style={{ color: "#7070a0", fontSize: 14 }}>Agar ochilmasa, quyidagi tugmani bosing</p>
-      <a href={`sms:${phones}?body=${encodeURIComponent(message)}`} style={{
+      <a href={`sms:${cleanPhones}?body=${encodeURIComponent(message)}`} style={{
         marginTop: 20, padding: "14px 28px", background: "#6c63ff",
         color: "white", borderRadius: 12, textDecoration: "none",
         fontWeight: 700, fontSize: 16,

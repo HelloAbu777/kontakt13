@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const { phones, message, names } = await req.json();
@@ -8,23 +7,13 @@ export async function POST(req: NextRequest) {
 
   const token    = process.env.TELEGRAM_BOT_TOKEN;
   const chatId   = process.env.TELEGRAM_CHAT_ID;
-  const smsUrl  = `sms:${phones.join(",")}?body=${encodeURIComponent(message)}`;
+  // Telefon raqamlarini to'g'ri formatda - + belgisini olib tashlash
+  const cleanPhones = phones.map((p: string) => p.replace(/\D/g, ""));
+  const smsUrl  = `sms:${cleanPhones.join(";")}?body=${encodeURIComponent(message)}`;
   const phoneList = phones.map((p: string, i: number) => `${names?.[i] || "Noma'lum"}: ${p}`).join("\n");
   const text = `📱 SMS so'rovi\n\n💬 Xabar: ${message}\n\n📞 Kontaktlar:\n${phoneList}`;
 
-  // SMS so'rovini bazaga saqlash
-  const { data: smsData } = await supabase
-    .from("sms_logs")
-    .insert({
-      phones: phones.join(","),
-      message,
-      status: "pending",
-    })
-    .select()
-    .single();
-
-  const smsId = smsData?.id || "unknown";
-
+  // Telegram botga xabar yuborish
   const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -37,11 +26,11 @@ export async function POST(req: NextRequest) {
           [
             {
               text: "✅ Tasdiqlash",
-              callback_data: `confirm_sms_${smsId}`,
+              url: smsUrl,
             },
             {
               text: "❌ Bekor qilish",
-              callback_data: `cancel_sms_${smsId}`,
+              callback_data: "cancel_sms",
             },
           ],
         ],

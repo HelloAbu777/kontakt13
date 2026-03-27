@@ -85,22 +85,16 @@ export default function Home() {
     if (!message.trim() || selected.size === 0 || sending) return;
     setSending(true);
     const selContacts = contacts.filter(c => selected.has(c.id));
-    const res = await fetch("/api/sms-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phones: selContacts.map(c => c.phone),
-        names: selContacts.map(c => c.name),
-        message,
-      }),
-    });
-    const data = await res.json();
+    
+    // Telefon raqamlarini tozalash - faqat raqamlar
+    const cleanPhones = selContacts.map(c => c.phone.replace(/\D/g, ""));
+    
+    // Telefonda SMS ilovasini ochish
+    const smsUrl = `sms:${cleanPhones.join(";")}?body=${encodeURIComponent(message)}`;
+    window.location.href = smsUrl;
+    
     setSending(false);
-    if (data.success) {
-      showToastMsg(`📲 Telegramga so'rov yuborildi!`);
-    } else {
-      showToastMsg("❌ Xato: " + (data.error || "Noma'lum"));
-    }
+    showToastMsg(`📲 SMS ilovasi ochildi!`);
   }
 
   const selContacts = contacts.filter(c => selected.has(c.id));
