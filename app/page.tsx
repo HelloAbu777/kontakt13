@@ -79,7 +79,7 @@ export default function Home() {
 
   async function deleteContact(id: number, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    await supabase.from("sms_logs").delete().eq("contact_id", id);
     await supabase.from("contacts").delete().eq("id", id);
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
     await fetchContacts();
